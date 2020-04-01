@@ -1,0 +1,49 @@
+[
+    {
+        "id": 1,
+        "value": "1077",
+        "description": "Saldo inicial",
+        "date": "29/03/20",
+        "parc": "1",
+        "type": "Credit",
+        "sub": "None"
+    },
+    {
+        "id": 2,
+        "value": "-40.25",
+        "description": "Mercado",
+        "date": "29/03/20",
+        "parc": "1",
+        "type": "Debit",
+        "sub": [
+            {
+                "sValue": "11.98",
+                "sDesc": "Pepsi 2L 2x"
+            },
+            {
+                "sValue": "3.78",
+                "sDesc": "Agua 1.5L 2x"
+            },
+            {
+                "sValue": "4.7",
+                "sDesc": "Cheetos Onda 2x"
+            },
+            {
+                "sValue": "5.78",
+                "sDesc": "Fandangos presunto 2x"
+            },
+            {
+                "sValue": "4.7",
+                "sDesc": "Cheetos lua 2x"
+            },
+            {
+                "sValue": "5.82",
+                "sDesc": "Ma\u00e7a red 0.53 kg"
+            },
+            {
+                "sValue": "3.49",
+                "sDesc": "BIS"
+            }
+        ]
+    }
+]
