@@ -1,17 +1,20 @@
-###
+### error description:
 # erro 121 - senha ou usuario incorreto.
 # erro 33 - valor ou descrição não definidos.
 # erro 157 - erro de criacao de usuario (senha/usuario)
-
+### hotkeys:
 # f1 - enter with debit.
 # f2 - enter with credit.
+# enter create item.
 # esc - reset entries.
-###
+### anotations:
+# make log list a dict (action: time)
 
 # Packages.
 import pandas as pd
 import datetime as dt
 import matplotlib.pyplot as plt
+import mplcyberpunk
 import os
 import ast
 import json
@@ -20,7 +23,6 @@ from tkinter import *
 from tkinter import messagebox
 from tkinter import ttk
 from cryptography.fernet import Fernet
-
 import PIL
 from PIL import Image, ImageTk
 from tkcalendar import DateEntry
@@ -28,6 +30,7 @@ from tkcalendar import DateEntry
 # Global Variables.
 username = ''
 save_status = 'disabled'
+log_list = ['Iniciado.', ]
 M_FONT = 'Roboto 10'
 M_COLOR = {'p0': 'white',
            'p1': '#aa84c7',
@@ -43,17 +46,17 @@ class Main:
     def __init__(self, master):
         # Configs.
         self.master = master
-        master.geometry('216x440+220+500')  # SE
+        master.geometry('216x440+852+320')  # SE
         master.iconbitmap(resource_path('icon.ico'))
         master.attributes('-topmost', 1)
         master.overrideredirect(1)
         master.resizable(0, 0)
-        master.attributes('-alpha', 0.9)
         master['bg'] = M_COLOR['p3']
         master.title('')
 
         # Files.
         self.users = {}
+        # profile_window = Profile(self.master)
 
         # Frames.
         self.f1_main = tk.Frame(master)
@@ -104,7 +107,7 @@ class Main:
         self.create_bt.grid(row=4, sticky=W)
 
         self.sign_img = tk.PhotoImage(file=resource_path('in.png'))
-        self.login_bt = tk.Button(self.f1_main, width=24, height=24, bd=0, text='Login', pady=0)
+        self.login_bt = tk.Button(self.f1_main, width=24, height=24, bd=0, pady=0)
         self.login_bt['activebackground'] = M_COLOR['p3']
         self.login_bt['command'] = self.f_sign
         self.login_bt['image'] = self.sign_img
@@ -197,7 +200,9 @@ class Create(tk.Toplevel):  # usar strvar e trace para validar o nome de usuario
         tk.Toplevel.__init__(self, master)
         self.master = master
         self.grab_set()
-        self.geometry('304x200+420+500')  # SE
+        self.x = master.winfo_x()
+        self.y = master.winfo_y()
+        self.geometry('304x200+{}+{}'.format(self.x-45, self.y+94))
         self.iconbitmap(resource_path('icon.ico'))
         self.attributes('-topmost', 1)
         self.resizable(0, 0)
@@ -303,7 +308,7 @@ class Create(tk.Toplevel):  # usar strvar e trace para validar o nome de usuario
                         with open(resource_path('users.bin'), 'wb') as self.user_file:
                             self.user_file.write(str(self.users).encode())
                         messagebox.showinfo('Novo Usuário', 'Usuário criado com sucesso!')
-                        with open(resource_path(str(self.user_entry.get() + '.json')), 'w+') as user_init:
+                        with open(resource_path(str(self.user_entry.get() + '.encrypted')), 'w+') as user_init:
                             user_init.write('[]')
                         self.destroy()
                     else:
@@ -330,11 +335,14 @@ class Peripheral(tk.Toplevel):
         global username, save_status
         tk.Toplevel.__init__(self, master)
         self.master = master
-        self.geometry('480x216+220+500')
-        self.iconbitmap(resource_path('icon.ico'))
         self['bg'] = M_COLOR['rp0']
-        self.protocol('WM_DELETE_WINDOW', self.f_del_window)
         self.title('Constancy WIP')
+        self.x = master.winfo_x()
+        self.y = master.winfo_y()
+        self.geometry('428x216+{}+{}'.format(self.x-107, self.y+49))
+        self.protocol('WM_DELETE_WINDOW', self.f_del_window)
+        self.resizable(0, 0)
+        self.iconbitmap(resource_path('icon.ico'))
         self.register_f = self.register(self.f_validate_float)
         self.register_i = self.register(self.f_validate_integer)
 
@@ -344,7 +352,6 @@ class Peripheral(tk.Toplevel):
         self.balance_status = 0
         self.sub_item_total = 0
         self.sub_item_counter = 0
-        self.log_list = ['Iniciado.', ]
         self.sub_item_list = []
         self.json_file = []
         self.f_load()
@@ -374,13 +381,14 @@ class Peripheral(tk.Toplevel):
         self.f3_peri.grid_rowconfigure(2, minsize=48)
 
         # Labels.
-        self.balance_lbl = self.c1_peri.create_text(356, 24, font=M_FONT,
+        self.balance_lbl = self.c1_peri.create_text(304, 24, font=M_FONT,
                                                     text='Saldo: R$ ' + '{0:.2f}'.format(self.balance),
                                                     fill=M_COLOR['p1'], anchor=W)
 
         self.welcome_lbl = self.c1_peri.create_text(44, 24, font=M_FONT,
                                                     text='Bem vindo, ' + username + '.',
                                                     fill=M_COLOR['p1'], anchor=W)
+        self.c1_peri.itemconfig(2, text='Bem vindo, ' + username + '.')
 
         self.value_lbl = tk.Label(self.f3_peri, text='Valor:')
         self.value_lbl['foreground'] = M_COLOR['p0']
@@ -400,22 +408,16 @@ class Peripheral(tk.Toplevel):
         self.date_lbl['bg'] = M_COLOR['rp0']
         self.date_lbl.grid(row=0, column=2, sticky=W)
 
-        self.parc_lbl = tk.Label(self.f3_peri, text='Fração:')
-        self.parc_lbl['foreground'] = M_COLOR['p0']
-        self.parc_lbl['font'] = M_FONT
-        self.parc_lbl['bg'] = M_COLOR['rp0']
-        self.parc_lbl.grid(row=0, column=3, sticky=W)
-
         self.type_lbl = tk.Label(self.f3_peri, text='Tipo:')
         self.type_lbl['foreground'] = M_COLOR['p0']
         self.type_lbl['font'] = M_FONT
         self.type_lbl['bg'] = M_COLOR['rp0']
-        self.type_lbl.grid(row=0, column=4, sticky=W)
+        self.type_lbl.grid(row=0, column=3, sticky=W)
 
-        self.log_lbl = self.c2_peri.create_text(8, 12, font=M_FONT, text=self.log_list[-1],
+        self.log_lbl = self.c2_peri.create_text(8, 12, font=M_FONT, text=log_list[-1],
                                                 fill=M_COLOR['p3'], anchor=W)
-
-        self.sub_item_total_lbl = self.c2_peri.create_text(472, 12, font=M_FONT, text='',
+        self.c2_peri.itemconfig(1, text=log_list[-1])
+        self.sub_item_total_lbl = self.c2_peri.create_text(420, 12, font=M_FONT, text='',
                                                            fill=M_COLOR['p3'], anchor=E)
 
         # Entries.
@@ -436,20 +438,12 @@ class Peripheral(tk.Toplevel):
         self.date_entry['style'] = 'my.DateEntry'
         self.date_entry.grid(row=1, column=2, sticky=W)
 
-        self.parc_entry = ttk.Combobox(self.f3_peri, width=4, justify=RIGHT)
-        self.parc_entry['values'] = [1, 2, 3, 4, 6, 8, 10, 12, 24, 32, 64, 128]
-        self.parc_entry['height'] = 5
-        self.parc_entry['font'] = M_FONT
-        self.parc_entry.grid(row=1, column=3, sticky=W)
-        self.parc_entry.config(validate='key', validatecommand=(self.register_i, '%P'))
-        self.parc_entry.set(1)
-
         self.type_entry = ttk.Combobox(self.f3_peri, width=8)
         self.type_entry['values'] = ['Debit', 'Credit']
         self.type_entry['height'] = 2
         self.type_entry['state'] = 'readonly'
         self.type_entry['font'] = M_FONT
-        self.type_entry.grid(row=1, column=4)
+        self.type_entry.grid(row=1, column=3)
         self.type_entry.set('Debit')
 
         self.sub_value_entry = ttk.Entry(self.f3_peri, width=10, justify=CENTER)
@@ -493,13 +487,13 @@ class Peripheral(tk.Toplevel):
         self.menu_bt.menu['bg'] = M_COLOR['rp1']
         self.menu_bt.menu['bd'] = 0
         self.menu_bt['menu'] = self.menu_bt.menu
-        self.menu_bt.menu.add_command(label='Log', state='disabled')
-        self.menu_bt.menu.add_command(label='Abrir', command=self.f_load)
+        self.menu_bt.menu.add_command(label='Perfil', command=self.f_profile)
         self.menu_bt.menu.add_command(label='Salvar', command=self.f_save)
         self.menu_bt.menu.add_command(label='Gráfico', command=self.f_graph)
         self.menu_bt.menu.add_command(label='Extrato', state='disabled')
+        self.menu_bt.menu.add_command(label='Log', state='disabled')
         self.menu_bt.menu.add_separator()
-        self.menu_bt.menu.add_command(label='Perfil', state='disabled')
+        self.menu_bt.menu.add_command(label='Ajuda', state='disabled')
         self.menu_bt.menu.add_separator()
         self.menu_bt.menu.add_command(label='Logout', command=self.f_logout)
 
@@ -509,7 +503,7 @@ class Peripheral(tk.Toplevel):
         self.show_bt['command'] = self.f_show_balance
         self.show_bt['image'] = self.show_img
         self.show_bt['bg'] = M_COLOR['p3']
-        self.show_bt.place(x=324, y=10)
+        self.show_bt.place(x=272, y=10)
 
         self.add_img = tk.PhotoImage(file=resource_path('add.png'))
         self.add_bt = tk.Button(self.f3_peri, width=24, height=24, bd=0, pady=0)
@@ -517,7 +511,7 @@ class Peripheral(tk.Toplevel):
         self.add_bt['command'] = self.f_create_item
         self.add_bt['image'] = self.add_img
         self.add_bt['bg'] = M_COLOR['rp0']
-        self.add_bt.grid(row=2, column=4, sticky=E)
+        self.add_bt.grid(row=2, column=3, sticky=E)
 
         self.x_img = tk.PhotoImage(file=resource_path('x.png'))
         self.clear_bt = tk.Button(self.f3_peri, width=24, height=24, bd=0)
@@ -525,30 +519,48 @@ class Peripheral(tk.Toplevel):
         self.clear_bt['command'] = self.f_reset_all
         self.clear_bt['image'] = self.x_img
         self.clear_bt['bg'] = M_COLOR['rp0']
-        self.clear_bt.grid(row=2, column=4)
+        self.clear_bt.grid(row=2, column=3)
 
         self.check_img = tk.PhotoImage(file=resource_path('check.png'))
-        self.sub_item_check_bt = tk.Button(self.f3_peri, width=24, height=24, bd=0)
-        self.sub_item_check_bt['activebackground'] = M_COLOR['rp0']
-        self.sub_item_check_bt['disabledforeground'] = M_COLOR['rp0']
-        self.sub_item_check_bt['command'] = self.f_create_sub_item
-        self.sub_item_check_bt['image'] = self.check_img
-        self.sub_item_check_bt['state'] = 'disabled'
-        self.sub_item_check_bt['bg'] = M_COLOR['rp0']
-        self.sub_item_check_bt.grid(row=2, column=3, sticky=W)
+        self.sub_item_bt = tk.Button(self.f3_peri, width=24, height=24, bd=0)
+        self.sub_item_bt['activebackground'] = M_COLOR['rp0']
+        self.sub_item_bt['disabledforeground'] = M_COLOR['rp0']
+        self.sub_item_bt['command'] = self.f_create_sub_item
+        self.sub_item_bt['image'] = self.check_img
+        self.sub_item_bt['state'] = 'disabled'
+        self.sub_item_bt['bg'] = M_COLOR['rp0']
+        self.sub_item_bt.grid(row=2, column=3, sticky=W)
 
         # Binds.
-        self.parc_entry.bind('<<ComboboxSelected>>', self.f_reset_parc_selection)
         self.bind('<Return>', lambda x: f_invoker(button=self.add_bt))
         self.bind('<Escape>', lambda x: f_invoker(button=self.clear_bt))
+        self.bind('<Alt-s>', lambda x: f_invoker(button=self.sub_item_check))
+        self.bind('<F1>', lambda x: self.f_bind(1))
+        self.bind('<F2>', lambda x: self.f_bind(2))
 
-    def f_load(self):  # abrir filedialog > escolher arquivo > substituir self.json_file
-        with open(resource_path(str(username + '.json')), 'r', encoding='utf-8') as j_file:
-            self.json_file = json.load(j_file)
-            print(self.json_file)
-        for i in self.json_file:
-            self.item_id = i['id']
+    def f_load(self):
+        global save_status
+        try:
+            with open(resource_path(username + '.encrypted'), 'rb') as j_file:
+                r_file = j_file.read()
+                f = Fernet(get_key())
+                d_j_file = f.decrypt(r_file).decode()
+                self.json_file = json.loads(d_j_file)
+                print(self.json_file)
+            for i in self.json_file:
+                self.item_id = i['id']
+        except Exception:  # <class 'cryptography.fernet.InvalidToken'> constancy_wip.py 541
+            self.json_file = []
         self.f_balance_load()
+        save_status = 'normal'
+
+    def f_bind(self, in_type):
+        if in_type == 1:
+            self.type_entry.set('Debit')
+            f_invoker(self.add_bt)
+        else:
+            self.type_entry.set('Credit')
+            f_invoker(self.add_bt)
 
     def f_balance_load(self):
         for b in self.json_file:
@@ -564,8 +576,10 @@ class Peripheral(tk.Toplevel):
 
     def f_save(self):
         global save_status
-        with open(resource_path(str(username + '.json')), 'w', encoding='utf-8') as j_file:
-            json.dump(self.json_file, j_file, indent=4)
+        with open(resource_path(str(username + '.encrypted')), 'wb') as j_file:
+            f = Fernet(get_key())
+            token = f.encrypt(json.dumps(self.json_file).encode())
+            j_file.write(token)
         self.f_log_update('Salvo.')
         save_status = 'normal'
 
@@ -578,23 +592,35 @@ class Peripheral(tk.Toplevel):
         if save_status == 'disabled':
             self.attributes('-disabled', 1)
             if messagebox.askyesno('Saindo', 'Deseja sair sem salvar?'):
+                plt.close()
                 self.quit()
                 self.master.destroy()
             else:
                 self.attributes('-disabled', 0)
                 self.value_entry.focus_force()
         else:
+            plt.close()
             self.master.destroy()
 
     def f_logout(self):
         if save_status == 'disabled':
             if messagebox.askyesno('Saindo', 'Deseja sair sem salvar?'):
+                plt.close()
                 self.destroy()
                 self.master.deiconify()
             else:
                 self.value_entry.focus_force()
         else:
+            plt.close()
             self.destroy()
+            self.master.deiconify()
+
+    def f_profile(self):
+        global log_list
+        profile_window = Profile(self.master)
+        log_list.append('Perfil aberto.')
+        self.withdraw()
+        profile_window.focus_force()
 
     def f_validate_float(self, key_in):
         if key_in == '':
@@ -619,11 +645,9 @@ class Peripheral(tk.Toplevel):
             return False
 
     def f_log_update(self, txt):
-        self.log_list.append(txt)
-        self.c2_peri.itemconfig(1, text=self.log_list[-1])
-
-    def f_reset_parc_selection(self, event=None):
-        self.parc_entry.selection_clear()
+        global log_list
+        log_list.append(txt)
+        self.c2_peri.itemconfig(1, text=log_list[-1])
 
     def f_reset_all(self):
         if self.value_entry.get() != '' or self.desc_entry.get() != '':
@@ -631,7 +655,6 @@ class Peripheral(tk.Toplevel):
         self.sub_item_total = 0
         self.c2_peri.itemconfig(2, text='')
         self.value_entry.delete(0, 'end')
-        self.parc_entry.set('1')
         self.desc_entry.delete(0, 'end')
         self.sub_item_list.clear()
         self.value_entry.focus_force()
@@ -641,11 +664,10 @@ class Peripheral(tk.Toplevel):
             if self.sub_item_check.instate(statespec=('selected',)):
                 self.sub_desc_entry['state'] = ''
                 self.sub_value_entry['state'] = ''
-                self.sub_item_check_bt['state'] = 'normal'
+                self.sub_item_bt['state'] = 'normal'
                 self.desc_entry['state'] = 'disabled'
                 self.value_entry['state'] = 'disabled'
                 self.date_entry['state'] = 'disabled'
-                self.parc_entry['state'] = 'disabled'
                 self.type_entry['state'] = 'disabled'
                 self.clear_bt['state'] = 'disabled'
                 self.add_bt['state'] = 'disabled'
@@ -663,13 +685,12 @@ class Peripheral(tk.Toplevel):
                 self.desc_entry['state'] = ''
                 self.value_entry['state'] = ''
                 self.date_entry['state'] = ''
-                self.parc_entry['state'] = ''
                 self.type_entry['state'] = ''
                 self.clear_bt['state'] = 'normal'
                 self.add_bt['state'] = 'normal'
                 self.sub_desc_entry['state'] = 'disabled'
                 self.sub_value_entry['state'] = 'disabled'
-                self.sub_item_check_bt['state'] = 'disabled'
+                self.sub_item_bt['state'] = 'disabled'
                 self.attributes('-disabled', 0)
                 self.value_entry.focus()
         else:
@@ -685,8 +706,8 @@ class Peripheral(tk.Toplevel):
                                            'sDesc': self.sub_desc_entry.get()})
                 self.sub_item_total = self.sub_item_total - float(self.sub_value_entry.get())
                 self.c2_peri.itemconfig(2, text='Valor total: ' + str('{0:.2f}'.format(self.sub_item_total)))
-                self.log_list.append(str(self.sub_item_counter) + 'º Subitem criado.')
-                self.c2_peri.itemconfigure(1, text=self.log_list[-1])
+                log_list.append(str(self.sub_item_counter) + 'º Subitem criado.')
+                self.c2_peri.itemconfigure(1, text=log_list[-1])
                 self.sub_desc_entry.delete(0, 'end')
                 self.sub_value_entry.delete(0, 'end')
                 self.sub_value_entry.focus()
@@ -708,6 +729,7 @@ class Peripheral(tk.Toplevel):
             return value
 
     def f_create_item(self):
+        global save_status
         if self.value_entry.get() != '' and self.desc_entry.get() != '':
             if self.sub_item_counter == 0:
                 item = {
@@ -715,12 +737,12 @@ class Peripheral(tk.Toplevel):
                     'value': self.f_type(self.value_entry.get()),
                     'description': self.desc_entry.get(),
                     'date': self.date_entry.get(),
-                    'parc': self.parc_entry.get(),
                     'type': self.type_entry.get(),
                     'sub': 'None'
                 }
                 self.json_file.append(item)
                 self.item_id += 1
+                save_status = 'disabled'
                 print(self.json_file)
             else:
                 item = {
@@ -728,7 +750,6 @@ class Peripheral(tk.Toplevel):
                     'value': self.f_type(self.value_entry.get()),
                     'description': self.desc_entry.get(),
                     'date': self.date_entry.get(),
-                    'parc': self.parc_entry.get(),
                     'type': self.type_entry.get(),
                     'sub': []
                 }
@@ -736,6 +757,7 @@ class Peripheral(tk.Toplevel):
                     item['sub'].append(self.sub_item_list[i])
                 self.json_file.append(item)
                 self.item_id += 1
+                save_status = 'disabled'
                 print(self.json_file)
             self.balance = self.balance + float(self.f_type(self.value_entry.get()))
             self.f_reset_all()
@@ -744,8 +766,10 @@ class Peripheral(tk.Toplevel):
             self.sub_item_counter = 0
         else:
             self.f_error_msg(txt='O item precisa ser definido.')
+            self.value_entry.focus_force()
 
     def f_graph(self):
+        plt.close()
         data = {}
         dates_list = []
         values_list = []
@@ -760,9 +784,10 @@ class Peripheral(tk.Toplevel):
         for d, v in ordered_data:
             values_list.append(float(v))
             dates_list.append(d)
-        series = pd.Series(values_list)
+        series = pd.Series(values_list, dtype='float64')
         cumulative_sum = series.cumsum()
         serialized_date = [dt.datetime.strptime(d, '%d/%m/%y').date() for d in dates_list]
+        plt.style.use("cyberpunk")
         plt.plot(serialized_date, cumulative_sum, 'm', marker='o')
         plt.xticks(rotation=20)
         plt.subplots_adjust(right=0.95, top=0.93, bottom=0.15)
@@ -770,7 +795,261 @@ class Peripheral(tk.Toplevel):
         plt.xlabel('Data')
         plt.ylabel('Saldo')
         self.f_log_update(txt='Gráfico gerado.')
+        mplcyberpunk.add_glow_effects()
         plt.show()
+
+
+class Profile(tk.Toplevel):
+    def __init__(self, master):
+        tk.Toplevel.__init__(self, master)
+        global username
+        self.master = master
+        self['bg'] = M_COLOR['p3']
+        self.title('Constancy WIP')
+        self.geo_x = master.winfo_x()
+        self.geo_y = master.winfo_y()
+        self.transient(master)
+        self.geometry('216x260+{}+{}'.format(self.geo_x+0, self.geo_y+0))
+        self.protocol('WM_DELETE_WINDOW', self.f_accept)  # change close func
+        self.resizable(0, 0)
+        self.iconbitmap(resource_path('icon.ico'))
+
+        # Variables.
+        self.hidden = True
+        self.debit_mean = 0
+        self.date_list = []
+        self.credit_mean = 0
+        try:
+            with open(resource_path(username + '.encrypted'), 'rb') as j_file:
+                r_file = j_file.read()
+                f = Fernet(get_key())
+                d_j_file = f.decrypt(r_file).decode()
+                self.json_file = json.loads(d_j_file)
+            for i in self.json_file:
+                self.item_id = i['id']
+        except Exception:  # <class 'cryptography.fernet.InvalidToken'> constancy_wip.py 541
+            self.json_file = []
+
+        # Background.
+        prof_bg = tk.PhotoImage(file=resource_path('prof_back.png'))
+        self.background = prof_bg
+
+        self.bg_label = tk.Label(self, width=214, height=36)
+        self.bg_label['bg'] = M_COLOR['p3']
+        self.bg_label['image'] = prof_bg
+        self.bg_label.place(x=0, y=-2)
+
+        prof_f_bg = tk.PhotoImage(file=resource_path('prof_frame_back.png'))
+        self.frame_background = prof_f_bg
+
+        self.bg_label = tk.Label(self, width=198, height=146)
+        self.bg_label['bg'] = M_COLOR['p3']
+        self.bg_label['image'] = prof_f_bg
+        self.bg_label.place(x=8, y=106)
+
+        # Frames.
+        self.f4_prof = tk.Frame(self)
+        self.f4_prof['bg'] = M_COLOR['p3']
+        self.f4_prof.place(x=8, y=48)
+        self.f4_prof.rowconfigure(1, minsize=40)
+
+        self.f5_prof = tk.Frame(self)  # pass
+        self.f5_prof['bg'] = M_COLOR['p3']
+        self.f5_prof.place(x=24, y=128)
+        self.f5_prof.rowconfigure(1, minsize=25)
+
+        self.f6_prof = tk.Frame(self)
+        self.f6_prof['bg'] = M_COLOR['p3']
+        self.f6_prof.place(x=24, y=124)
+        #
+        # self.f7_prof = tk.Frame(self)  # useless
+        # self.f7_prof['bg'] = M_COLOR['p3']
+        # self.f7_prof.place(x=24, y=268)
+        # self.f7_prof.columnconfigure(1, minsize=134)
+
+        # Labels.
+        self.name_lb = tk.Label(self.f4_prof, text='Nome:')
+        self.name_lb['foreground'] = M_COLOR['p1']
+        self.name_lb['background'] = M_COLOR['p3']
+        self.name_lb['font'] = M_FONT
+        self.name_lb.grid(row=0, column=0, sticky=W)
+
+        self.date_lb = tk.Label(self.f6_prof, text='Data: ' + str(dt.datetime.today().date().strftime('%d/%m/%Y')))
+        self.date_lb['foreground'] = M_COLOR['p1']
+        self.date_lb['background'] = M_COLOR['p3']
+        self.date_lb['font'] = M_FONT
+        self.date_lb.grid(row=0, column=0)
+
+        self.gmm_lb = tk.Label(self.f6_prof)
+        self.gmm_lb['foreground'] = M_COLOR['p1']
+        self.gmm_lb['background'] = M_COLOR['p3']
+        self.gmm_lb['text'] = 'Gasto médio diário: ' + str('{0:.2f}'.format(-self.f_month_mean()[1]))
+        self.gmm_lb['font'] = M_FONT
+        self.gmm_lb.grid(row=1, column=0, sticky=W)
+
+        self.lmm_lb = tk.Label(self.f6_prof)
+        self.lmm_lb['foreground'] = M_COLOR['p1']
+        self.lmm_lb['background'] = M_COLOR['p3']
+        self.lmm_lb['text'] = 'Lucro médio diário: ' + str('{0:.2f}'.format(self.f_month_mean()[0]))
+        self.lmm_lb['font'] = M_FONT
+        self.lmm_lb.grid(row=2, column=0, sticky=W)
+
+        self.gmt_lb = tk.Label(self.f6_prof)
+        self.gmt_lb['foreground'] = M_COLOR['p1']
+        self.gmt_lb['background'] = M_COLOR['p3']
+        self.gmt_lb['text'] = 'Gasto total mensal: ' + str('{0:.2f}'.format(-self.f_month_mean()[2]))
+        self.gmt_lb['font'] = M_FONT
+        self.gmt_lb.grid(row=3, column=0, sticky=W)
+
+        self.lmt_lb = tk.Label(self.f6_prof)
+        self.lmt_lb['foreground'] = M_COLOR['p1']
+        self.lmt_lb['background'] = M_COLOR['p3']
+        self.lmt_lb['text'] = 'Lucro total mensal: ' + str('{0:.2f}'.format(self.f_month_mean()[3]))
+        self.lmt_lb['font'] = M_FONT
+        self.lmt_lb.grid(row=4, column=0, sticky=W)
+
+        self.old_pw_lb = tk.Label(self.f5_prof, text='Senha atual:')
+        self.old_pw_lb['foreground'] = M_COLOR['p1']
+        self.old_pw_lb['background'] = M_COLOR['p3']
+        self.old_pw_lb['font'] = M_FONT
+        self.old_pw_lb.grid(row=0, column=0, sticky=W)
+
+        self.new_pw_lb = tk.Label(self.f5_prof, text='Nova senha:')
+        self.new_pw_lb['foreground'] = M_COLOR['p1']
+        self.new_pw_lb['background'] = M_COLOR['p3']
+        self.new_pw_lb['font'] = M_FONT
+        self.new_pw_lb.grid(row=1, column=0, sticky=W)
+
+        self.conf_pw_lb = tk.Label(self.f5_prof, text='Confirme:')
+        self.conf_pw_lb['foreground'] = M_COLOR['p1']
+        self.conf_pw_lb['background'] = M_COLOR['p3']
+        self.conf_pw_lb['font'] = M_FONT
+        self.conf_pw_lb.grid(row=2, column=0, sticky=W)
+
+        # Entries.
+        self.name_entry = tk.Entry(self.f4_prof, width=18, bd=0)
+        self.name_entry.insert(0, username)
+        self.name_entry['state'] = 'disabled'
+        self.name_entry['font'] = M_FONT
+        self.name_entry['background'] = M_COLOR['p3']
+        self.name_entry['disabledbackground'] = M_COLOR['p3']
+        self.name_entry['foreground'] = M_COLOR['p1']
+        self.name_entry['disabledforeground'] = M_COLOR['p1']
+        self.name_entry.grid(row=0, column=1)
+
+        self.old_pw_entry = tk.Entry(self.f5_prof, width=14, show='*')
+        self.old_pw_entry['background'] = M_COLOR['p3']
+        self.old_pw_entry['disabledbackground'] = M_COLOR['p3']
+        self.old_pw_entry['foreground'] = M_COLOR['p1']
+        self.old_pw_entry['disabledforeground'] = M_COLOR['p1']
+        self.old_pw_entry.grid(row=0, column=1)
+
+        self.new_pw_entry = tk.Entry(self.f5_prof, width=14, show='*')
+        self.new_pw_entry['background'] = M_COLOR['p3']
+        self.new_pw_entry['disabledbackground'] = M_COLOR['p3']
+        self.new_pw_entry['foreground'] = M_COLOR['p1']
+        self.new_pw_entry['disabledforeground'] = M_COLOR['p1']
+        self.new_pw_entry.grid(row=1, column=1)
+
+        self.conf_pw_entry = tk.Entry(self.f5_prof, width=14, show='*')
+        self.conf_pw_entry['background'] = M_COLOR['p3']
+        self.conf_pw_entry['disabledbackground'] = M_COLOR['p3']
+        self.conf_pw_entry['foreground'] = M_COLOR['p1']
+        self.conf_pw_entry['disabledforeground'] = M_COLOR['p1']
+        self.conf_pw_entry.grid(row=2, column=1)
+
+        # Buttons.
+        self.edit_img = tk.PhotoImage(file=resource_path('edit.png'))
+        self.name_edit_bt = tk.Button(self.f4_prof, width=20, height=16, bd=0)
+        self.name_edit_bt['activebackground'] = M_COLOR['p3']
+        self.name_edit_bt['image'] = self.edit_img
+        self.name_edit_bt['command'] = self.f_name_edit
+        self.name_edit_bt['bg'] = M_COLOR['p3']
+        self.name_edit_bt.grid(row=0, column=2)
+
+        self.confirm_img = tk.PhotoImage(file=resource_path('check2.png'))
+        self.name_confirm_bt = tk.Button(self.f4_prof, width=20, height=16, bd=0)
+        self.name_confirm_bt['activebackground'] = M_COLOR['p3']
+        self.name_confirm_bt['image'] = self.confirm_img
+        self.name_confirm_bt['command'] = self.f_name_edit
+        self.name_confirm_bt['bg'] = M_COLOR['p3']
+        self.name_confirm_bt.grid(row=0, column=2)
+        self.name_confirm_bt.grid_remove()
+
+        self.change_pw_toggle_bt = tk.Button(self.f4_prof, text='Mudar senha', width=9, height=1, bd=0)
+        self.change_pw_toggle_bt['activebackground'] = M_COLOR['p3']
+        self.change_pw_toggle_bt['activeforeground'] = M_COLOR['p1']
+        self.change_pw_toggle_bt['foreground'] = M_COLOR['p1']
+        self.change_pw_toggle_bt['font'] = M_FONT
+        self.change_pw_toggle_bt['command'] = lambda: self.f_change_frame(self.f5_prof)
+        self.change_pw_toggle_bt['bg'] = M_COLOR['p3']
+        self.change_pw_toggle_bt.grid(row=1, column=0, columnspan=2, sticky=W)
+
+        self.back_bt = tk.Button(self.f5_prof, text='Voltar', width=6, height=2, bd=0)
+        self.back_bt['activebackground'] = M_COLOR['p3']
+        self.back_bt['activeforeground'] = M_COLOR['p1']
+        self.back_bt['foreground'] = M_COLOR['p1']
+        self.back_bt['font'] = M_FONT
+        self.back_bt['command'] = lambda: self.f_change_frame(self.f6_prof)
+        self.back_bt['bg'] = M_COLOR['p3']
+        self.back_bt.grid(row=3, column=0, sticky=W)
+
+        self.change_pw_bt = tk.Button(self.f5_prof, text='Confirmar', width=7, height=2, bd=0)
+        self.change_pw_bt['activebackground'] = M_COLOR['p3']
+        self.change_pw_bt['activeforeground'] = M_COLOR['p1']
+        self.change_pw_bt['foreground'] = M_COLOR['p1']
+        self.change_pw_bt['font'] = M_FONT
+        # self.change_pw_bt['command'] = lambda: self.f_change_frame(self.f6_prof)
+        self.change_pw_bt['bg'] = M_COLOR['p3']
+        self.change_pw_bt.grid(row=3, column=1, sticky=E)
+
+        # Binds.
+
+    def f_name_edit(self):
+        global username, log_list
+        if self.hidden:
+            self.name_entry['state'] = 'normal'
+            self.name_entry.focus()
+            self.name_entry.select_range(0, 'end')
+            self.name_edit_bt.grid_remove()
+            self.name_confirm_bt.grid()
+            self.hidden = False
+        else:
+            if self.name_entry.get() != username:
+                with open(resource_path('users.bin'), 'rb') as r_users:
+                    users_dict = r_users.read().decode()
+                with open(resource_path('users.bin'), 'wb') as w_users:
+                    w_users.write(users_dict.replace(username, self.name_entry.get()).encode())
+                os.rename(resource_path(username + '.encrypted'), resource_path(self.name_entry.get() + '.encrypted'))
+                username = self.name_entry.get()
+                log_list.append('Perfil modificado.')
+            self.name_entry['state'] = 'disabled'
+            self.name_confirm_bt.grid_remove()
+            self.name_edit_bt.grid()
+            self.hidden = True
+
+    def f_month_mean(self):
+        month = '0{}'.format(dt.date.today().month)  # self.date.get()
+        debit_list = []
+        credit_list = []
+        for t in self.json_file:
+            if t['type'] == "Debit" and '/' + month + '/' in t['date']:
+                debit_list.append(float(t["value"]))
+            else:
+                credit_list.append(float(t['value']))
+        d_mean = sum(debit_list)/float(dt.date.today().day)
+        d_total = sum(debit_list)
+        c_mean = sum(credit_list)/float(dt.date.today().day)
+        c_total = sum(credit_list)
+        return c_mean, d_mean, d_total, c_total
+
+    def f_change_frame(self, frame):
+        frame.tkraise()
+        self.old_pw_entry.focus()
+
+    def f_accept(self):  # acept pw change (change file/encrypt pw)
+        self.withdraw()
+        peripheral_window = Peripheral(self.master)
 
 
 def f_invoker(button, event=None):
@@ -778,7 +1057,7 @@ def f_invoker(button, event=None):
 
 
 def get_key():
-    with open(resource_path('lk.bin'), 'rb') as key_file:
+    with open(resource_path('lk.key'), 'rb') as key_file:
         key = key_file.read()
     return key
 
