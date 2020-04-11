@@ -1,3 +1,4 @@
+![Constancy](https://github.com/crimson-luis/Constancy/blob/master/images/file.gif)
 # Constancy
 Python based GUI that helps you organize and visualize your balance.
 
