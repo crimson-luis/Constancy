@@ -18,6 +18,7 @@ import mplcyberpunk
 import os
 import ast
 import json
+import calendar
 import tkinter as tk
 from tkinter import *
 from tkinter import messagebox
@@ -56,7 +57,7 @@ class Main:
 
         # Files.
         self.users = {}
-        # profile_window = Profile(self.master)
+        profile_window = Profile(self.master)
 
         # Frames.
         self.f1_main = tk.Frame(master)
@@ -90,7 +91,7 @@ class Main:
         self.name_entry = ttk.Entry(self.f1_main, width=18)
         self.name_entry['font'] = M_FONT
         self.name_entry.grid(row=1, columnspan=2, sticky=W)
-        self.name_entry.focus_set()
+        self.name_entry.focus_force()
 
         self.pw_entry = ttk.Entry(self.f1_main, show='*', width=18)
         self.pw_entry['font'] = M_FONT
@@ -194,7 +195,7 @@ class Main:
         self.name_entry.focus_force()
 
 
-class Create(tk.Toplevel):  # usar strvar e trace para validar o nome de usuario
+class Create(tk.Toplevel):
     def __init__(self, master):
         # Configs.
         tk.Toplevel.__init__(self, master)
@@ -791,7 +792,11 @@ class Peripheral(tk.Toplevel):
         plt.plot(serialized_date, cumulative_sum, 'm', marker='o')
         plt.xticks(rotation=20)
         plt.subplots_adjust(right=0.95, top=0.93, bottom=0.15)
-        plt.title('Saldo ao longo do tempo.')
+        fig = plt.gcf()
+        manager = plt.get_current_fig_manager()
+        fig.canvas.set_window_title('Saldo ao longo do tempo')
+        manager.window.wm_iconbitmap(resource_path('icon.ico'))
+        # manager.window.SetPosition()
         plt.xlabel('Data')
         plt.ylabel('Saldo')
         self.f_log_update(txt='Gráfico gerado.')
@@ -825,10 +830,16 @@ class Profile(tk.Toplevel):
                 f = Fernet(get_key())
                 d_j_file = f.decrypt(r_file).decode()
                 self.json_file = json.loads(d_j_file)
+                print(self.json_file)
             for i in self.json_file:
                 self.item_id = i['id']
         except Exception:  # <class 'cryptography.fernet.InvalidToken'> constancy_wip.py 541
             self.json_file = []
+        self.values = set()
+        for d in self.json_file:
+            self.values.add(d['date'].split('/')[1] + '/' + d['date'].split('/')[2])
+        self.values = sorted(list(self.values))
+        print(self.values)
 
         # Background.
         prof_bg = tk.PhotoImage(file=resource_path('prof_back.png'))
@@ -855,12 +866,12 @@ class Profile(tk.Toplevel):
 
         self.f5_prof = tk.Frame(self)  # pass
         self.f5_prof['bg'] = M_COLOR['p3']
-        self.f5_prof.place(x=24, y=128)
+        self.f5_prof.place(x=22, y=128)
         self.f5_prof.rowconfigure(1, minsize=25)
 
         self.f6_prof = tk.Frame(self)
         self.f6_prof['bg'] = M_COLOR['p3']
-        self.f6_prof.place(x=24, y=124)
+        self.f6_prof.place(x=22, y=124)
         #
         # self.f7_prof = tk.Frame(self)  # useless
         # self.f7_prof['bg'] = M_COLOR['p3']
@@ -874,39 +885,39 @@ class Profile(tk.Toplevel):
         self.name_lb['font'] = M_FONT
         self.name_lb.grid(row=0, column=0, sticky=W)
 
-        self.date_lb = tk.Label(self.f6_prof, text='Data: ' + str(dt.datetime.today().date().strftime('%d/%m/%Y')))
-        self.date_lb['foreground'] = M_COLOR['p1']
-        self.date_lb['background'] = M_COLOR['p3']
-        self.date_lb['font'] = M_FONT
-        self.date_lb.grid(row=0, column=0)
-
         self.gmm_lb = tk.Label(self.f6_prof)
         self.gmm_lb['foreground'] = M_COLOR['p1']
         self.gmm_lb['background'] = M_COLOR['p3']
-        self.gmm_lb['text'] = 'Gasto médio diário: ' + str('{0:.2f}'.format(-self.f_month_mean()[1]))
+        self.gmm_lb['text'] = ''
         self.gmm_lb['font'] = M_FONT
-        self.gmm_lb.grid(row=1, column=0, sticky=W)
+        self.gmm_lb.grid(row=0, column=0, columnspan=2, sticky=W)
 
         self.lmm_lb = tk.Label(self.f6_prof)
         self.lmm_lb['foreground'] = M_COLOR['p1']
         self.lmm_lb['background'] = M_COLOR['p3']
-        self.lmm_lb['text'] = 'Lucro médio diário: ' + str('{0:.2f}'.format(self.f_month_mean()[0]))
+        self.lmm_lb['text'] = ''
         self.lmm_lb['font'] = M_FONT
-        self.lmm_lb.grid(row=2, column=0, sticky=W)
+        self.lmm_lb.grid(row=1, column=0, columnspan=2, sticky=W)
 
         self.gmt_lb = tk.Label(self.f6_prof)
         self.gmt_lb['foreground'] = M_COLOR['p1']
         self.gmt_lb['background'] = M_COLOR['p3']
-        self.gmt_lb['text'] = 'Gasto total mensal: ' + str('{0:.2f}'.format(-self.f_month_mean()[2]))
+        self.gmt_lb['text'] = ''
         self.gmt_lb['font'] = M_FONT
-        self.gmt_lb.grid(row=3, column=0, sticky=W)
+        self.gmt_lb.grid(row=2, column=0, columnspan=2, sticky=W)
 
         self.lmt_lb = tk.Label(self.f6_prof)
         self.lmt_lb['foreground'] = M_COLOR['p1']
         self.lmt_lb['background'] = M_COLOR['p3']
-        self.lmt_lb['text'] = 'Lucro total mensal: ' + str('{0:.2f}'.format(self.f_month_mean()[3]))
+        self.lmt_lb['text'] = ''
         self.lmt_lb['font'] = M_FONT
-        self.lmt_lb.grid(row=4, column=0, sticky=W)
+        self.lmt_lb.grid(row=3, column=0, columnspan=2, sticky=W)
+
+        self.month_lb = tk.Label(self.f6_prof, text='Mês de referência:')
+        self.month_lb['foreground'] = M_COLOR['p1']
+        self.month_lb['background'] = M_COLOR['p3']
+        self.month_lb['font'] = M_FONT
+        self.month_lb.grid(row=4, column=0, sticky=W)
 
         self.old_pw_lb = tk.Label(self.f5_prof, text='Senha atual:')
         self.old_pw_lb['foreground'] = M_COLOR['p1']
@@ -937,26 +948,21 @@ class Profile(tk.Toplevel):
         self.name_entry['disabledforeground'] = M_COLOR['p1']
         self.name_entry.grid(row=0, column=1)
 
-        self.old_pw_entry = tk.Entry(self.f5_prof, width=14, show='*')
-        self.old_pw_entry['background'] = M_COLOR['p3']
-        self.old_pw_entry['disabledbackground'] = M_COLOR['p3']
-        self.old_pw_entry['foreground'] = M_COLOR['p1']
-        self.old_pw_entry['disabledforeground'] = M_COLOR['p1']
+        self.old_pw_entry = ttk.Entry(self.f5_prof, width=14, show='*')
         self.old_pw_entry.grid(row=0, column=1)
 
-        self.new_pw_entry = tk.Entry(self.f5_prof, width=14, show='*')
-        self.new_pw_entry['background'] = M_COLOR['p3']
-        self.new_pw_entry['disabledbackground'] = M_COLOR['p3']
-        self.new_pw_entry['foreground'] = M_COLOR['p1']
-        self.new_pw_entry['disabledforeground'] = M_COLOR['p1']
+        self.new_pw_entry = ttk.Entry(self.f5_prof, width=14, show='*')
         self.new_pw_entry.grid(row=1, column=1)
 
-        self.conf_pw_entry = tk.Entry(self.f5_prof, width=14, show='*')
-        self.conf_pw_entry['background'] = M_COLOR['p3']
-        self.conf_pw_entry['disabledbackground'] = M_COLOR['p3']
-        self.conf_pw_entry['foreground'] = M_COLOR['p1']
-        self.conf_pw_entry['disabledforeground'] = M_COLOR['p1']
+        self.conf_pw_entry = ttk.Entry(self.f5_prof, width=14, show='*')
         self.conf_pw_entry.grid(row=2, column=1)
+
+        self.month_cBox = ttk.Combobox(self.f6_prof, width=6)
+        self.month_cBox['values'] = self.values
+        self.month_cBox.grid(row=4, column=1, sticky=E)
+        self.month_cBox.set(self.values[-1])
+
+        self.f_month_mean()
 
         # Buttons.
         self.edit_img = tk.PhotoImage(file=resource_path('edit.png'))
@@ -994,7 +1000,7 @@ class Profile(tk.Toplevel):
         self.back_bt['bg'] = M_COLOR['p3']
         self.back_bt.grid(row=3, column=0, sticky=W)
 
-        self.change_pw_bt = tk.Button(self.f5_prof, text='Confirmar', width=7, height=2, bd=0)
+        self.change_pw_bt = tk.Button(self.f5_prof, text='Confirmar', width=11, height=2, bd=0)
         self.change_pw_bt['activebackground'] = M_COLOR['p3']
         self.change_pw_bt['activeforeground'] = M_COLOR['p1']
         self.change_pw_bt['foreground'] = M_COLOR['p1']
@@ -1004,6 +1010,7 @@ class Profile(tk.Toplevel):
         self.change_pw_bt.grid(row=3, column=1, sticky=E)
 
         # Binds.
+        self.month_cBox.bind('<<ComboboxSelected>>', self.f_month_mean)
 
     def f_name_edit(self):
         global username, log_list
@@ -1028,20 +1035,30 @@ class Profile(tk.Toplevel):
             self.name_edit_bt.grid()
             self.hidden = True
 
-    def f_month_mean(self):
-        month = '0{}'.format(dt.date.today().month)  # self.date.get()
+    def f_month_mean(self, event=None):
+        self.month_cBox.select_clear()
+        month = self.month_cBox.get().split('/')[0]  # self.date.get()
+        year = self.month_cBox.get().split('/')[1]  # self.date.get()
         debit_list = []
         credit_list = []
         for t in self.json_file:
-            if t['type'] == "Debit" and '/' + month + '/' in t['date']:
-                debit_list.append(float(t["value"]))
-            else:
-                credit_list.append(float(t['value']))
-        d_mean = sum(debit_list)/float(dt.date.today().day)
+            if month == t['date'].split('/')[1]:
+                if t['type'] == "Debit":
+                    debit_list.append(float(t["value"]))
+                else:
+                    credit_list.append(float(t['value']))
+        if month == dt.datetime.now().strftime('%m'):
+            d_mean = sum(debit_list)/int(dt.date.today().day)
+            c_mean = sum(credit_list)/int(dt.date.today().day)
+        else:
+            d_mean = sum(debit_list)/calendar.monthrange(int(year), int(month))[1]
+            c_mean = sum(credit_list)/calendar.monthrange(int(year), int(month))[1]
         d_total = sum(debit_list)
-        c_mean = sum(credit_list)/float(dt.date.today().day)
         c_total = sum(credit_list)
-        return c_mean, d_mean, d_total, c_total
+        self.gmm_lb.configure(text='Gasto médio diário: ' + str('{0:.2f}'.format(-d_mean)))
+        self.lmm_lb.configure(text='Lucro médio diário: ' + str('{0:.2f}'.format(c_mean)))
+        self.gmt_lb.configure(text='Despesa mensal: ' + str('{0:.2f}'.format(-d_total)))
+        self.lmt_lb.configure(text='Receita mensal: ' + str('{0:.2f}'.format(c_total)))
 
     def f_change_frame(self, frame):
         frame.tkraise()
