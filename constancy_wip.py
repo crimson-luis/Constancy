@@ -57,7 +57,7 @@ class Main:
 
         # Files.
         self.users = {}
-        profile_window = Profile(self.master)
+        # profile_window = Profile(self.master)
 
         # Frames.
         self.f1_main = tk.Frame(master)
