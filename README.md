@@ -2,6 +2,9 @@
 # Constancy
 Python based GUI that helps you organize and visualize your balance.
 
+### Imports
+pandas, datetime, matplotlib.pyplot, mplcyberpunk, os, ast, json, calendar, tkinter (messagebox, ttk), cryptography.fernet (Fernet), win32api (GetSystemMetrics), PIL (Image, ImageTk), tkcalendar (DateEntry).
+
 ### Pics
 ![Início](https://github.com/crimson-luis/Constancy/blob/master/images/init_pic.png)
 ![Criar](https://github.com/crimson-luis/Constancy/blob/master/images/create_pic.png)
