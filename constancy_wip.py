@@ -9,6 +9,7 @@
 # esc - reset entries.
 ### anotations:
 # make log list a dict (action: time)
+# add "lucro total mensal" to statistcs frame
 
 # Packages.
 import pandas as pd
@@ -24,14 +25,16 @@ from tkinter import *
 from tkinter import messagebox
 from tkinter import ttk
 from cryptography.fernet import Fernet
+from win32api import GetSystemMetrics
 import PIL
 from PIL import Image, ImageTk
 from tkcalendar import DateEntry
 
 # Global Variables.
 username = ''
+x, y = int(GetSystemMetrics(0)/2 - 108), int(GetSystemMetrics(1)/2 - 220)
 save_status = 'disabled'
-log_list = ['Iniciado.', ]
+log_list = ['Iniciado.', ]  # DICT
 M_FONT = 'Roboto 10'
 M_COLOR = {'p0': 'white',
            'p1': '#aa84c7',
@@ -47,7 +50,7 @@ class Main:
     def __init__(self, master):
         # Configs.
         self.master = master
-        master.geometry('216x440+852+320')  # SE
+        master.geometry('216x440+{}+{}'.format(x, y))  # 852 320
         master.iconbitmap(resource_path('icon.ico'))
         master.attributes('-topmost', 1)
         master.overrideredirect(1)
@@ -55,9 +58,11 @@ class Main:
         master['bg'] = M_COLOR['p3']
         master.title('')
 
-        # Files.
+        # Variables.
         self.users = {}
         # profile_window = Profile(self.master)
+        self._off_set_x = 0
+        self._off_set_y = 0
 
         # Frames.
         self.f1_main = tk.Frame(master)
@@ -125,14 +130,13 @@ class Main:
         self.quit_bt.place(x=72, y=412)
 
         # Window Movement.
-        self._off_set_x = 0
-        self._off_set_y = 0
         bg_label.bind('<Button-1>', self.click_win)
         bg_label.bind('<B1-Motion>', self.drag_win)
-        self.master.bind('<Return>', lambda x: f_invoker(button=self.login_bt))
-        self.master.bind('<Escape>', lambda x: f_invoker(button=self.quit_bt))
+        self.master.bind('<Return>', lambda k: f_invoker(button=self.login_bt))
+        self.master.bind('<Escape>', lambda k: f_invoker(button=self.quit_bt))
 
     def drag_win(self, event):
+        global x, y
         x = self.master.winfo_pointerx() - self._off_set_x
         y = self.master.winfo_pointery() - self._off_set_y
         self.master.geometry('+{x}+{y}'.format(x=x, y=y))
@@ -160,6 +164,7 @@ class Main:
         self.pw_entry['state'] = state
 
     def click_win(self, event):
+        global x, y
         self._off_set_x = event.x
         self._off_set_y = event.y
 
@@ -201,11 +206,10 @@ class Create(tk.Toplevel):
         tk.Toplevel.__init__(self, master)
         self.master = master
         self.grab_set()
-        self.x = master.winfo_x()
-        self.y = master.winfo_y()
-        self.geometry('304x200+{}+{}'.format(self.x-45, self.y+94))
+        self.geometry('304x200+{}+{}'.format(x-45, y+94))
         self.iconbitmap(resource_path('icon.ico'))
         self.attributes('-topmost', 1)
+        self.transient(master)
         self.resizable(0, 0)
         self.title('Novo Usuário')
         self['bg'] = M_COLOR['p3']
@@ -284,12 +288,12 @@ class Create(tk.Toplevel):
         self.confirm_bt['command'] = self.f_confirm
         self.confirm_bt['font'] = M_FONT
         self.confirm_bt.grid(row=4, column=1, sticky=E)
-        
+
         # Binds.
         self.info_pw_lb.bind('<Enter>', self.on_enter)
         self.info_pw_lb.bind('<Leave>', self.on_leave)
-        self.bind('<Return>', lambda x: f_invoker(button=self.confirm_bt))
-        self.bind('<Escape>', lambda x: f_invoker(button=self.cancel_bt))
+        self.bind('<Return>', lambda k: f_invoker(button=self.confirm_bt))
+        self.bind('<Escape>', lambda k: f_invoker(button=self.cancel_bt))
 
     def on_enter(self, event):
         self.pw_info_lb.configure(text='Mínimo de quatro caracteres.')
@@ -308,9 +312,9 @@ class Create(tk.Toplevel):
                         self.users.update({self.user_entry.get(): f_encrypt(self.password_entry.get()).decode()})
                         with open(resource_path('users.bin'), 'wb') as self.user_file:
                             self.user_file.write(str(self.users).encode())
-                        messagebox.showinfo('Novo Usuário', 'Usuário criado com sucesso!')
                         with open(resource_path(str(self.user_entry.get() + '.encrypted')), 'w+') as user_init:
                             user_init.write('[]')
+                        messagebox.showinfo('Novo Usuário', 'Usuário criado com sucesso!')
                         self.destroy()
                     else:
                         self.f_error_msg('As senhas não coincidem.')
@@ -333,19 +337,15 @@ class Create(tk.Toplevel):
 class Peripheral(tk.Toplevel):
     def __init__(self, master):
         # Configs.
-        global username, save_status
         tk.Toplevel.__init__(self, master)
         self.master = master
         self['bg'] = M_COLOR['rp0']
         self.title('Constancy WIP')
-        self.x = master.winfo_x()
-        self.y = master.winfo_y()
-        self.geometry('428x216+{}+{}'.format(self.x-107, self.y+49))
+        self.geometry('428x216+{}+{}'.format(x-107, y+49))
         self.protocol('WM_DELETE_WINDOW', self.f_del_window)
         self.resizable(0, 0)
         self.iconbitmap(resource_path('icon.ico'))
         self.register_f = self.register(self.f_validate_float)
-        self.register_i = self.register(self.f_validate_integer)
 
         # Variables.
         self.item_id = 0
@@ -356,6 +356,8 @@ class Peripheral(tk.Toplevel):
         self.sub_item_list = []
         self.json_file = []
         self.f_load()
+        self._off_set_x = 0
+        self._off_set_y = 0
 
         # Styles.
         self.style_check = ttk.Style()
@@ -426,6 +428,7 @@ class Peripheral(tk.Toplevel):
         self.value_entry.config(validate='key', validatecommand=(self.register_f, '%P'))
         self.value_entry['font'] = M_FONT
         self.value_entry.grid(row=1, column=0)
+        self.value_entry.focus_force()
 
         self.desc_entry = ttk.Entry(self.f3_peri, width=24)
         self.desc_entry['font'] = M_FONT
@@ -533,11 +536,23 @@ class Peripheral(tk.Toplevel):
         self.sub_item_bt.grid(row=2, column=3, sticky=W)
 
         # Binds.
-        self.bind('<Return>', lambda x: f_invoker(button=self.add_bt))
-        self.bind('<Escape>', lambda x: f_invoker(button=self.clear_bt))
-        self.bind('<Alt-s>', lambda x: f_invoker(button=self.sub_item_check))
-        self.bind('<F1>', lambda x: self.f_bind(1))
-        self.bind('<F2>', lambda x: self.f_bind(2))
+        self.bind('<Button-1>', self.click_win)
+        self.bind('<Configure>', self.f_info_coord)
+        self.bind('<Return>', lambda k: f_invoker(button=self.add_bt))
+        self.bind('<Escape>', lambda k: f_invoker(button=self.clear_bt))
+        self.bind('<Alt-s>', lambda k: f_invoker(button=self.sub_item_check))
+        self.bind('<F1>', lambda k: self.f_bind(1))
+        self.bind('<F2>', lambda k: self.f_bind(2))
+
+    def f_info_coord(self, event):
+        global x, y
+        x = self.master.winfo_pointerx() - self._off_set_x
+        y = self.master.winfo_pointery() - self._off_set_y
+
+    def click_win(self, event):
+        global x, y
+        self._off_set_x = event.x
+        self._off_set_y = event.y
 
     def f_load(self):
         global save_status
@@ -547,7 +562,6 @@ class Peripheral(tk.Toplevel):
                 f = Fernet(get_key())
                 d_j_file = f.decrypt(r_file).decode()
                 self.json_file = json.loads(d_j_file)
-                print(self.json_file)
             for i in self.json_file:
                 self.item_id = i['id']
         except Exception:  # <class 'cryptography.fernet.InvalidToken'> constancy_wip.py 541
@@ -609,18 +623,21 @@ class Peripheral(tk.Toplevel):
                 plt.close()
                 self.destroy()
                 self.master.deiconify()
+                Main(self.master).name_entry.focus_force()
             else:
                 self.value_entry.focus_force()
         else:
             plt.close()
             self.destroy()
             self.master.deiconify()
+            Main(self.master).name_entry.focus_force()
 
     def f_profile(self):
         global log_list
+        self.f_save()
         profile_window = Profile(self.master)
-        log_list.append('Perfil aberto.')
-        self.withdraw()
+        self.f_log_update('Perfil aberto.')
+        # self.withdraw()
         profile_window.focus_force()
 
     def f_validate_float(self, key_in):
@@ -630,18 +647,6 @@ class Peripheral(tk.Toplevel):
             float(key_in)
             return True
         except ValueError:
-            self.bell()
-            return False
-
-    def f_validate_integer(self, key_in):
-        if key_in.isdigit():
-            if int(key_in) in [1, 2, 3, 4, 6, 8, 10, 12, 24, 48, 64, 128]:
-                return True
-            else:
-                return False
-        elif key_in == '':
-            return True
-        else:
             self.bell()
             return False
 
@@ -744,7 +749,6 @@ class Peripheral(tk.Toplevel):
                 self.json_file.append(item)
                 self.item_id += 1
                 save_status = 'disabled'
-                print(self.json_file)
             else:
                 item = {
                     'id': self.item_id + 1,
@@ -759,7 +763,6 @@ class Peripheral(tk.Toplevel):
                 self.json_file.append(item)
                 self.item_id += 1
                 save_status = 'disabled'
-                print(self.json_file)
             self.balance = self.balance + float(self.f_type(self.value_entry.get()))
             self.f_reset_all()
             self.f_log_update(txt=str(self.item_id) + 'º Item criado.')
@@ -809,12 +812,11 @@ class Profile(tk.Toplevel):
         tk.Toplevel.__init__(self, master)
         global username
         self.master = master
+        self.grab_set()
         self['bg'] = M_COLOR['p3']
         self.title('Constancy WIP')
-        self.geo_x = master.winfo_x()
-        self.geo_y = master.winfo_y()
         self.transient(master)
-        self.geometry('216x260+{}+{}'.format(self.geo_x+0, self.geo_y+0))
+        self.geometry('216x260+{}+{}'.format(x+0, y+0))
         self.protocol('WM_DELETE_WINDOW', self.f_accept)  # change close func
         self.resizable(0, 0)
         self.iconbitmap(resource_path('icon.ico'))
@@ -830,16 +832,14 @@ class Profile(tk.Toplevel):
                 f = Fernet(get_key())
                 d_j_file = f.decrypt(r_file).decode()
                 self.json_file = json.loads(d_j_file)
-                print(self.json_file)
             for i in self.json_file:
                 self.item_id = i['id']
+            self.values = set()
+            for d in self.json_file:
+                self.values.add(d['date'].split('/')[1] + '/' + d['date'].split('/')[2])
+            self.values = sorted(list(self.values))
         except Exception:  # <class 'cryptography.fernet.InvalidToken'> constancy_wip.py 541
             self.json_file = []
-        self.values = set()
-        for d in self.json_file:
-            self.values.add(d['date'].split('/')[1] + '/' + d['date'].split('/')[2])
-        self.values = sorted(list(self.values))
-        print(self.values)
 
         # Background.
         prof_bg = tk.PhotoImage(file=resource_path('prof_back.png'))
@@ -960,7 +960,11 @@ class Profile(tk.Toplevel):
         self.month_cBox = ttk.Combobox(self.f6_prof, width=6)
         self.month_cBox['values'] = self.values
         self.month_cBox.grid(row=4, column=1, sticky=E)
-        self.month_cBox.set(self.values[-1])
+        if self.values:
+            self.month_cBox.set(self.values[-1])
+        else:
+            self.month_cBox.set(dt.datetime.now().strftime('%m/%y'))
+            self.month_cBox['state'] = 'disabled'
 
         self.f_month_mean()
 
@@ -991,7 +995,7 @@ class Profile(tk.Toplevel):
         self.change_pw_toggle_bt['bg'] = M_COLOR['p3']
         self.change_pw_toggle_bt.grid(row=1, column=0, columnspan=2, sticky=W)
 
-        self.back_bt = tk.Button(self.f5_prof, text='Voltar', width=6, height=2, bd=0)
+        self.back_bt = tk.Button(self.f5_prof, text='Voltar', width=8, height=2, bd=0)
         self.back_bt['activebackground'] = M_COLOR['p3']
         self.back_bt['activeforeground'] = M_COLOR['p1']
         self.back_bt['foreground'] = M_COLOR['p1']
@@ -1005,12 +1009,15 @@ class Profile(tk.Toplevel):
         self.change_pw_bt['activeforeground'] = M_COLOR['p1']
         self.change_pw_bt['foreground'] = M_COLOR['p1']
         self.change_pw_bt['font'] = M_FONT
-        # self.change_pw_bt['command'] = lambda: self.f_change_frame(self.f6_prof)
+        self.change_pw_bt['command'] = self.f_change_password
         self.change_pw_bt['bg'] = M_COLOR['p3']
         self.change_pw_bt.grid(row=3, column=1, sticky=E)
 
         # Binds.
         self.month_cBox.bind('<<ComboboxSelected>>', self.f_month_mean)
+        for b in [self.old_pw_entry, self.new_pw_entry, self.conf_pw_entry]:
+            b.bind('<Return>', lambda k: f_invoker(button=self.change_pw_bt))
+            b.bind('<Escape>', lambda k: f_invoker(button=self.back_bt))
 
     def f_name_edit(self):
         global username, log_list
@@ -1062,11 +1069,57 @@ class Profile(tk.Toplevel):
 
     def f_change_frame(self, frame):
         frame.tkraise()
-        self.old_pw_entry.focus()
+        self.old_pw_entry.delete(0, 'end')
+        self.new_pw_entry.delete(0, 'end')
+        self.conf_pw_entry.delete(0, 'end')
+        if frame == self.f5_prof:
+            self.old_pw_entry.focus()
+        else:
+            self.f6_prof.focus_set()
+
+    def f_error_msg(self, txt):
+        self.attributes('-disabled', 1)
+        messagebox.showerror('Erro 33!', txt)
+        self.attributes('-disabled', 0)
+        self.old_pw_entry.focus_force()
+
+    def f_pass_validate(self, password):
+        with open(resource_path('users.bin'), 'rb') as users_file:
+            users = users_file.read().decode()
+            self.users = ast.literal_eval(users)
+        f_key = Fernet(get_key())
+        if password == f_key.decrypt(self.users.get(username).encode()).decode():
+            return True
+        else:
+            return False
+
+    def f_change_password(self):
+        if self.old_pw_entry.get() != '' and self.new_pw_entry.get() != '' and self.conf_pw_entry.get() != '':
+            if self.f_pass_validate(password=self.old_pw_entry.get()):
+                if len(self.new_pw_entry.get()) >= 4 or len(self.conf_pw_entry.get()) >= 4:
+                    if self.new_pw_entry.get() == self.conf_pw_entry.get():
+                        with open(resource_path('users.bin'), 'rb') as r_users:
+                            users_dict = r_users.read().decode()
+                            users_dict = ast.literal_eval(users_dict)
+                        f_key = Fernet(get_key())
+                        token = f_key.encrypt(self.new_pw_entry.get().encode()).decode()
+                        users_dict[username] = token
+                        with open(resource_path('users.bin'), 'wb') as w_users:
+                            w_users.write(str(users_dict).encode())
+                        messagebox.showinfo('Atualização de perfil.', 'Senha atualizada com sucesso!')
+                        f_invoker(self.back_bt)
+                    else:
+                        self.f_error_msg(txt='Senhas não coincidem!')
+                else:
+                    self.f_error_msg(txt='Mínimo de quatro caracteres!!')
+            else:
+                self.f_error_msg(txt='Senha incorreta!')
+        else:
+            self.f_error_msg(txt='Campos obrigatórios não podem ficar em branco!')
 
     def f_accept(self):  # acept pw change (change file/encrypt pw)
         self.withdraw()
-        peripheral_window = Peripheral(self.master)
+        self.grab_release()
 
 
 def f_invoker(button, event=None):
